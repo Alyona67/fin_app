@@ -53,10 +53,11 @@ fun DashboardScreen(
     val balance by viewModel.totalBalance.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
+    val currency by viewModel.currency.collectAsState()
 
     val spentMap = remember(transactions, categories) {
         categories.associate { cat ->
-            cat.id to transactions.filter { it.categoryId == cat.id && it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+            cat.id to transactions.filter { it.categoryId == cat.id && it.type == "EXPENSE" }.sumOf { it.amount }
         }
     }
 
@@ -101,7 +102,7 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "${String.format("%.2f", balance).replace('.', ',')} Br",
+                            text = "${String.format("%.2f", balance).replace('.', ',')} $currency", // <-- ЗАМЕНИЛИ Br НА $currency
                             color = Color.White,
                             fontSize = 40.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -210,7 +211,7 @@ fun BudgetsScreen(
             ) {
                 items(categories) { category ->
                     val spent = transactions
-                        .filter { it.categoryId == category.id && it.type == TransactionType.EXPENSE }
+                        .filter { it.categoryId == category.id && it.type == "EXPENSE" }
                         .sumOf { it.amount }
 
                     Box(
@@ -285,73 +286,208 @@ fun BudgetsScreen(
 
 @Composable
 fun ProfileScreen(
+    viewModel: MainViewModel = viewModel(),
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     onNavigateToGoals: () -> Unit
 ) {
+    var showBalanceDialog by remember { mutableStateOf(false) }
+    var newBalanceText by remember { mutableStateOf("") }
+    val currency by viewModel.currency.collectAsState()
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    val currentBg = if (isDarkTheme) DarkBg else LavenderBg
+    val currentTextColor = if (isDarkTheme) Color.White else TextDark
+    val currentCardColor = if (isDarkTheme) DarkCard else CardWhite
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isDarkTheme) DarkBg else LavenderBg)
+            .background(currentBg)
             .padding(24.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Настройки",
+            text = "Профиль",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color.White else TextDark
+            color = currentTextColor
         )
         Spacer(modifier = Modifier.height(24.dp))
 
+        // 1. Переключатель темы
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(if (isDarkTheme) DarkCard else CardWhite)
+                .background(currentCardColor)
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Темная тема",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (isDarkTheme) Color.White else TextDark
-            )
+            Text("Темная тема", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
             Switch(
                 checked = isDarkTheme,
                 onCheckedChange = { onThemeChange(it) },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = GradientPurpleStart
-                )
+                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = GradientPurpleStart)
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
+        // 2. Выбор валюты
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(if (isDarkTheme) DarkCard else CardWhite)
+                .background(currentCardColor)
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Валюта", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Br", "$", "€").forEach { curr ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (currency == curr) GradientPurpleStart else Color.Transparent)
+                            .clickable { viewModel.setCurrency(curr) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(curr, color = if (currency == curr) Color.White else TextGray, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("Инструменты", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 3. Мои цели
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(currentCardColor)
                 .clickable { onNavigateToGoals() }
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Мои цели",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (isDarkTheme) Color.White else TextDark
-            )
-            Icon(
-                Icons.Filled.Star,
-                contentDescription = null,
-                tint = GradientPurpleStart
-            )
+            Text("Мои цели", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 4. Аналитика (заглушка)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(currentCardColor)
+                .clickable { /* TODO: Переход в аналитику */ }
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Аналитика и графики", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(currentCardColor)
+                .clickable {
+                    newBalanceText = "" // Сбрасываем поле
+                    showBalanceDialog = true
+                }
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Изменить общий баланс", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
+            Icon(Icons.Filled.Edit, contentDescription = null, tint = GradientPurpleStart)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 5. Сброс данных
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Red.copy(alpha = 0.1f))
+                .clickable { showResetDialog = true }
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Сбросить все данные", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Red)
+            Icon(Icons.Filled.Delete, contentDescription = null, tint = Color.Red)
+        }
+    }
+
+    // Диалог подтверждения сброса
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Вы уверены?") },
+            text = { Text("Все ваши транзакции будут безвозвратно удалены. Категории останутся на месте.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.clearAllData()
+                    showResetDialog = false
+                }) {
+                    Text("Сбросить", color = Color.Red, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
+    }
+
+    if (showBalanceDialog) {
+        AlertDialog(
+            onDismissRequest = { showBalanceDialog = false },
+            title = { Text("Новый общий баланс") },
+            text = {
+                OutlinedTextField(
+                    value = newBalanceText,
+                    onValueChange = { newBalanceText = it },
+                    label = { Text("Сумма") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val amount = newBalanceText.toDoubleOrNull()
+                    if (amount != null) {
+                        viewModel.setTotalBalance(amount)
+                    }
+                    showBalanceDialog = false
+                }) {
+                    Text("Сохранить", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBalanceDialog = false }) {
+                    Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
     }
 }
 
@@ -363,21 +499,18 @@ fun HistoryScreen(
     val transactions by viewModel.transactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
 
-    // Состояние для транзакции, которую хотим удалить
-    var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
+    var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val currentBg = if (isDarkTheme) DarkBg else LavenderBg
     val currentTextColor = if (isDarkTheme) Color.White else TextDark
     val currentCardColor = if (isDarkTheme) DarkCard else CardWhite
-
-    val sortedTransactions = transactions.sortedByDescending { it.date }
 
     Box(modifier = Modifier.fillMaxSize().background(currentBg)) {
         Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Text("История", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (sortedTransactions.isEmpty()) {
+            if (transactions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("У вас пока нет операций", color = TextGray, fontSize = 16.sp)
                 }
@@ -386,12 +519,12 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(sortedTransactions) { transaction ->
+                    items(transactions) { transaction -> // transaction теперь TransactionEntity
                         val category = categories.find { it.id == transaction.categoryId }
-                        val title = if (transaction.type == TransactionType.INCOME) "Пополнение" else (category?.name ?: "Без категории")
-                        val icon = if (transaction.type == TransactionType.INCOME) Icons.Filled.Add else (category?.icon ?: Icons.Filled.Star)
-                        val color = if (transaction.type == TransactionType.INCOME) Color(0xFF38A169) else (category?.color ?: TextGray)
-                        val amountText = if (transaction.type == TransactionType.INCOME) "+${String.format("%.2f", transaction.amount)} Br" else "-${String.format("%.2f", transaction.amount)} Br"
+                        val title = if (transaction.type == "INCOME") "Пополнение" else (category?.name ?: "Без категории")
+                        val icon = if (transaction.type == "INCOME") Icons.Filled.Add else (category?.icon ?: Icons.Filled.Star)
+                        val color = if (transaction.type == "INCOME") Color(0xFF38A169) else (category?.color ?: TextGray)
+                        val amountText = if (transaction.type == "INCOME") "+${String.format("%.2f", transaction.amount)} Br" else "-${String.format("%.2f", transaction.amount)} Br"
 
                         Box(
                             modifier = Modifier
@@ -416,12 +549,7 @@ fun HistoryScreen(
                                     Spacer(Modifier.width(12.dp))
                                     Column {
                                         Text(title, fontWeight = FontWeight.Bold, color = currentTextColor)
-                                        // Вставляем функцию форматирования даты (если ты её добавила)
-                                        Text(
-                                            text = formatTransactionDate(transaction.date),
-                                            fontSize = 12.sp,
-                                            color = TextGray
-                                        )
+                                        Text("Сегодня", fontSize = 12.sp, color = TextGray)
                                     }
                                 }
 
@@ -429,11 +557,10 @@ fun HistoryScreen(
                                     Text(
                                         text = amountText,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (transaction.type == TransactionType.INCOME) Color(0xFF38A169) else currentTextColor
+                                        color = if (transaction.type == "INCOME") Color(0xFF38A169) else currentTextColor
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
 
-                                    // Вместо прямого удаления, мы теперь открываем диалог
                                     IconButton(
                                         onClick = { transactionToDelete = transaction },
                                         modifier = Modifier.size(32.dp)
@@ -454,19 +581,17 @@ fun HistoryScreen(
         }
     }
 
-    // ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
+    // Окно подтверждения удаления
     if (transactionToDelete != null) {
         AlertDialog(
             onDismissRequest = { transactionToDelete = null },
             title = { Text("Удалить операцию?") },
-            text = {
-                Text("Вы уверены, что хотите удалить эту операцию? Сумма вернется на баланс.")
-            },
+            text = { Text("Вы уверены, что хотите удалить эту операцию? Сумма вернется на баланс.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         transactionToDelete?.let { viewModel.deleteTransaction(it) }
-                        transactionToDelete = null // Закрываем окно
+                        transactionToDelete = null
                     }
                 ) {
                     Text("Удалить", color = Color.Red, fontWeight = FontWeight.Bold)
