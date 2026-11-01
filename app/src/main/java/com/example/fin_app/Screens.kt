@@ -36,7 +36,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 // ПАЛИТРА
 val LavenderBg = Color(0xFFF4F0FA)
 val GradientPurpleStart = Color(0xFF7B3AF1)
-val GradientPurpleEnd = Color(0xFF996FF3)
+val GradientPurpleEnd = Color(0xFF9979E5)
 val AccentPurple = Color(0xFF6B46C1)
 val TextDark = Color(0xFF2D3748)
 val TextGray = Color(0xFF718096)
@@ -45,6 +45,9 @@ val CardWhite = Color(0xFFFFFFFF)
 // Цвета для темной темы
 val DarkBg = Color(0xFF121212)
 val DarkCard = Color(0xFF1E1E24)
+val DarkCardBorder = Color(0xFF2A2A35) // Для обводки карточек
+val DarkGradientStart = Color(0xA12B1556) // Приглушенный фиолетовый
+val DarkGradientEnd = Color(0xA4381852)
 
 @Composable
 fun DashboardScreen(
@@ -81,7 +84,12 @@ fun DashboardScreen(
                         .shadow(elevation = 12.dp, shape = RoundedCornerShape(28.dp), ambientColor = GradientPurpleStart.copy(alpha = 0.3f), spotColor = Color.Black)
                         .clip(RoundedCornerShape(28.dp))
                         .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
-                        .background(Brush.linearGradient(colors = listOf(GradientPurpleStart, GradientPurpleEnd)))
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (isDarkTheme) listOf(DarkGradientStart, DarkGradientEnd)
+                                else listOf(GradientPurpleStart, GradientPurpleEnd)
+                            )
+                        )
                         .padding(horizontal = 24.dp, vertical = 23.dp)
                 ) {
                     Column {
@@ -271,8 +279,9 @@ fun BudgetsScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(24.dp)
+                .size(64.dp)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Добавить категорию", tint = Color.White)
+            Icon(Icons.Filled.Add, contentDescription = "Добавить категорию", tint = Color.White, modifier = Modifier.size(28.dp))
         }
     }
 
@@ -1216,9 +1225,9 @@ fun GoalsScreen(
             onClick = { showAddGoalDialog = true },
             containerColor = Color(0xFF6843A9),
             shape = CircleShape,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp)
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).size(64.dp)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = Color.White)
+            Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = Color.White,  modifier = Modifier.size(28.dp))
         }
     }
 

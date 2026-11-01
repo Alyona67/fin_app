@@ -70,6 +70,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
+        containerColor = if (isDarkTheme) Color(0xFF121212) else LavenderBg,
         bottomBar = {
             NavigationBar(
                 containerColor = if (isDarkTheme) Color(0xFF1E1E24) else Color.White,
