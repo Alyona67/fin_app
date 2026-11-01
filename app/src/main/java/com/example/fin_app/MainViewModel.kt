@@ -156,4 +156,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> "Star"
         }
     }
+
+    // 13. Полное обновление категории
+    fun updateCategory(categoryId: Int, newName: String, newLimit: Double, newIcon: ImageVector, newColor: Color) {
+        viewModelScope.launch {
+            val current = categoriesDb.value.find { it.id == categoryId }
+            if (current != null) {
+                val iconName = getIconName(newIcon)
+                val colorHex = String.format("#%06X", (0xFFFFFF and newColor.toArgb()))
+                dao.insertCategory(
+                    current.copy(
+                        name = newName,
+                        limitAmount = newLimit,
+                        iconName = iconName,
+                        colorHex = colorHex
+                    )
+                )
+            }
+        }
+    }
 }

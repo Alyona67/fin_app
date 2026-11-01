@@ -102,7 +102,7 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "${String.format("%.2f", balance).replace('.', ',')} $currency", // <-- ЗАМЕНИЛИ Br НА $currency
+                            text = "${String.format("%.2f", balance).replace('.', ',')} Br",
                             color = Color.White,
                             fontSize = 40.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -277,8 +277,8 @@ fun BudgetsScreen(
                 viewModel.deleteCategory(selectedCategory!!.id)
                 selectedCategory = null
             },
-            onUpdateLimit = { newLimit ->
-                viewModel.updateCategoryLimit(selectedCategory!!.id, newLimit)
+            onUpdateCategory = { name, limit, icon, color -> // <-- ИЗМЕНЕНО
+                viewModel.updateCategory(selectedCategory!!.id, name, limit, icon, color)
             }
         )
     }
@@ -295,6 +295,19 @@ fun ProfileScreen(
     var newBalanceText by remember { mutableStateOf("") }
     val currency by viewModel.currency.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
+    val tips = listOf(
+        "Записывай траты сразу после покупки. Так ты не забудешь, куда ушли деньги.",
+        "Правило 50/30/20: 50% на necessities, 30% на желания, 20% на сбережения.",
+        "Перед покупкой дорогой вещи подожди 24 часа. Часто желание пропадает.",
+        "Анализируй свои подписки. Возможно, ты платишь за то, чем не пользуешься.",
+        "Ставь финансовые цели. Когда есть цель, копить гораздо интереснее.",
+        "Не сравнивай свои траты с чужими. У каждого свой бюджет и свои потребности.",
+        "Откладывай 10% от любого дохода сразу, как только его получил."
+    )
+    // Получаем номер дня в году (от 1 до 365)
+    val dayOfYear = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)
+    // Выбираем совет, индекс которого зависит от дня
+    val dailyTip = tips[dayOfYear % tips.size]
 
     val currentBg = if (isDarkTheme) DarkBg else LavenderBg
     val currentTextColor = if (isDarkTheme) Color.White else TextDark
@@ -333,35 +346,32 @@ fun ProfileScreen(
             )
         }
 
+
+
+        Spacer(modifier = Modifier.height(28.dp))
+        Text("Совет дня", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 2. Выбор валюты
+        // Карточка с советом
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(currentCardColor)
+                .background(if (isDarkTheme) DarkCard else Color(0xFFFFF3E0))
                 .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Валюта", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Br", "$", "€").forEach { curr ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (currency == curr) GradientPurpleStart else Color.Transparent)
-                            .clickable { viewModel.setCurrency(curr) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(curr, color = if (currency == curr) Color.White else TextGray, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            Text("💡", fontSize = 32.sp)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = dailyTip,
+                fontSize = 14.sp,
+                color = if (isDarkTheme) Color.White else TextDark,
+                fontWeight = FontWeight.Medium
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
         Text("Инструменты", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -549,7 +559,11 @@ fun HistoryScreen(
                                     Spacer(Modifier.width(12.dp))
                                     Column {
                                         Text(title, fontWeight = FontWeight.Bold, color = currentTextColor)
-                                        Text("Сегодня", fontSize = 12.sp, color = TextGray)
+                                        Text(
+                                            text = formatTransactionDate(transaction.date),
+                                            fontSize = 12.sp,
+                                            color = TextGray
+                                        )
                                     }
                                 }
 
@@ -831,15 +845,34 @@ fun CategoryActionSheet(
     onDismiss: () -> Unit,
     onAddExpense: (Double) -> Unit,
     onDelete: () -> Unit,
-    onUpdateLimit: (Double) -> Unit
+    onUpdateCategory: (String, Double, ImageVector, Color) -> Unit // <-- НОВЫЙ КОЛЛБЭК
 ) {
     var amountText by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var isEditingLimit by remember { mutableStateOf(false) }
-    var limitText by remember { mutableStateOf(category.limit.toString()) }
+    var isEditing by remember { mutableStateOf(false) } // <-- Режим редактирования
+
+    // Поля для редактирования
+    var editName by remember { mutableStateOf(category.name) }
+    var editLimit by remember { mutableStateOf(category.limit.toString()) }
+    var editIcon by remember { mutableStateOf(category.icon) }
+    var editColor by remember { mutableStateOf(category.color) }
+
+    val availableIcons = listOf(
+        Icons.Filled.Home, Icons.Filled.Favorite, Icons.Filled.Place, Icons.Filled.Star,
+        Icons.Filled.ShoppingCart, Icons.Filled.DirectionsCar, Icons.Filled.Flight, Icons.Filled.Pets
+    )
+    val availableColors = listOf(
+        Color(0xFFE53E3E), Color(0xFFDD6B20), Color(0xFFD69E2E), Color(0xFF38A169),
+        Color(0xFF3182CE), Color(0xFF805AD5), Color(0xFFD53F8C), Color(0xFF319795),
+        Color(0xFF0B2F75), Color(0xFF750DBE)
+    )
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardWhite) {
-        Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ЗАГОЛОВОК
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -857,7 +890,8 @@ fun CategoryActionSheet(
                     }
                 }
 
-                if (!hasExpenses) {
+                // Кнопка удаления (только если нет трат и не в режиме редактирования)
+                if (!hasExpenses && !isEditing) {
                     IconButton(
                         onClick = { showDeleteDialog = true },
                         modifier = Modifier.clip(CircleShape).background(Color.Red.copy(alpha = 0.1f))
@@ -869,48 +903,85 @@ fun CategoryActionSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (isEditingLimit) {
+            // --- РЕЖИМ РЕДАКТИРОВАНИЯ ---
+            if (isEditing) {
                 OutlinedTextField(
-                    value = limitText, onValueChange = { limitText = it },
-                    label = { Text("Новый лимит (Br)") },
+                    value = editName, onValueChange = { editName = it },
+                    label = { Text("Название") },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = editLimit, onValueChange = { editLimit = it },
+                    label = { Text("Лимит (Br)") },
                     shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = category.color, unfocusedBorderColor = Color.LightGray,
-                        focusedTextColor = TextDark, unfocusedTextColor = TextDark,
-                        focusedLabelColor = category.color, unfocusedLabelColor = TextGray
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
+                Text("Цвет", fontSize = 14.sp, color = TextGray, modifier = Modifier.align(Alignment.Start))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    items(availableColors) { color ->
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(if (color == editColor) 3.dp else 0.dp, TextDark, CircleShape)
+                                .clickable { editColor = color }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Иконка", fontSize = 14.sp, color = TextGray, modifier = Modifier.align(Alignment.Start))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    items(availableIcons) { icon ->
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(if (icon == editIcon) editColor.copy(alpha = 0.2f) else Color.LightGray.copy(alpha = 0.2f))
+                                .border(if (icon == editIcon) 2.dp else 0.dp, if (icon == editIcon) editColor else Color.Transparent, CircleShape)
+                                .clickable { editIcon = icon },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(icon, contentDescription = null, tint = if (icon == editIcon) editColor else TextGray)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
-                        onClick = { isEditingLimit = false },
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        onClick = { isEditing = false },
+                        modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) { Text("Отмена", color = TextGray) }
                     Button(
                         onClick = {
-                            val newLimit = limitText.toDoubleOrNull()
-                            if (newLimit != null && newLimit > 0) { onUpdateLimit(newLimit); onDismiss() }
+                            val limit = editLimit.toDoubleOrNull()
+                            if (editName.isNotBlank() && limit != null && limit > 0) {
+                                onUpdateCategory(editName, limit, editIcon, editColor)
+                                onDismiss()
+                            }
                         },
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = category.color)
+                        colors = ButtonDefaults.buttonColors(containerColor = editColor)
                     ) { Text("Сохранить", fontWeight = FontWeight.Bold) }
                 }
+
             } else {
+                // --- ОБЫЧНЫЙ РЕЖИМ (Добавление траты) ---
                 OutlinedTextField(
                     value = amountText, onValueChange = { amountText = it },
                     label = { Text("Сумма расхода (Br)") },
                     shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = category.color, unfocusedBorderColor = Color.LightGray,
-                        focusedTextColor = TextDark, unfocusedTextColor = TextDark,
-                        focusedLabelColor = category.color, unfocusedLabelColor = TextGray
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
@@ -923,16 +994,17 @@ fun CategoryActionSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = category.color)
                 ) { Text("Добавить расход", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                // Кнопка перехода в режим редактирования
                 TextButton(
-                    onClick = { isEditingLimit = true },
+                    onClick = { isEditing = true },
                     modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) { Text("Изменить лимит", color = category.color, fontWeight = FontWeight.Medium) }
+                ) { Text("Редактировать категорию", color = GradientPurpleStart, fontWeight = FontWeight.Medium) }
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
+    // Диалог удаления
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
