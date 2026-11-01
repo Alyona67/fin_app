@@ -205,47 +205,57 @@ fun BudgetsScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
-                items(categories) { category ->
-                    val spent = transactions
-                        .filter { it.categoryId == category.id && it.type == "EXPENSE" }
-                        .sumOf { it.amount }
+            if (categories.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "У вас пока нет категорий. Добавьте первую!",
+                        color = TextGray,
+                        fontSize = 16.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
+                    items(categories) { category ->
+                        val spent = transactions
+                            .filter { it.categoryId == category.id && it.type == "EXPENSE" }
+                            .sumOf { it.amount }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(2.dp, RoundedCornerShape(20.dp), ambientColor = Color.LightGray.copy(alpha = 0.3f))
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(currentCardColor)
-                            .clickable { selectedCategory = category }
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(2.dp, RoundedCornerShape(20.dp), ambientColor = Color.LightGray.copy(alpha = 0.3f))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(currentCardColor)
+                                .clickable { selectedCategory = category }
+                                .padding(16.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(category.color.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(category.icon, contentDescription = null, tint = category.color, modifier = Modifier.size(20.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier.size(40.dp).clip(CircleShape).background(category.color.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(category.icon, contentDescription = null, tint = category.color, modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(category.name, fontWeight = FontWeight.Bold, color = currentTextColor)
+                                        Text("Лимит: ${category.limit} Br", fontSize = 12.sp, color = TextGray)
+                                    }
                                 }
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(category.name, fontWeight = FontWeight.Bold, color = currentTextColor)
-                                    Text("Лимит: ${category.limit} Br", fontSize = 12.sp, color = TextGray)
-                                }
+                                Text(
+                                    text = "${String.format("%.0f", spent)} Br",
+                                    fontWeight = FontWeight.Bold,
+                                    color = category.color
+                                )
                             }
-                            Text(
-                                text = "${String.format("%.0f", spent)} Br",
-                                fontWeight = FontWeight.Bold,
-                                color = category.color
-                            )
                         }
                     }
                 }
