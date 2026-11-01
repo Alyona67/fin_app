@@ -31,10 +31,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.platform.LocalDensity
-import kotlin.math.cos
-import kotlin.math.sin
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 
 // ПАЛИТРА
