@@ -304,6 +304,7 @@ fun ProfileScreen(
     var showBalanceDialog by remember { mutableStateOf(false) }
     var newBalanceText by remember { mutableStateOf("") }
     val currency by viewModel.currency.collectAsState()
+    var showComingSoonDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     val tips = listOf(
         "Записывай траты сразу после покупки. Так ты не забудешь, куда ушли деньги.",
@@ -421,10 +422,7 @@ fun ProfileScreen(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(currentCardColor)
-                .clickable {
-                    newBalanceText = "" // Сбрасываем поле
-                    showBalanceDialog = true
-                }
+                .clickable { showComingSoonDialog = true } // <-- ОТКРЫВАЕМ ОКНО
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -504,6 +502,21 @@ fun ProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showBalanceDialog = false }) {
                     Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
+    }
+
+    // Окно "Скоро здесь можно будет менять баланс"
+    if (showComingSoonDialog) {
+        AlertDialog(
+            onDismissRequest = { showComingSoonDialog = false },
+            title = { Text("В разработке") },
+            text = { Text("Скоро здесь можно будет менять общий баланс. А пока используй кнопку «Пополнить» на главном экране или добавь трату.") },
+            confirmButton = {
+                TextButton(onClick = { showComingSoonDialog = false }) {
+                    Text("Понятно", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
                 }
             },
             containerColor = CardWhite
