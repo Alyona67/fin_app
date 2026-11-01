@@ -1543,11 +1543,11 @@ fun AnalyticsScreen(
     if (showCalendar) {
         AlertDialog(
             onDismissRequest = { showCalendar = false },
-            title = { Text("Календарь трат", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+            title = { Text("Календарь трат", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color.White else TextDark) },
             text = {
-                // ВЫЗЫВАЕМ НАШ КАЛЕНДАРЬ
                 CalendarView(
                     transactions = transactions,
+                    categories = categories,
                     isDarkTheme = isDarkTheme
                 )
             },
@@ -1556,7 +1556,7 @@ fun AnalyticsScreen(
                     Text("Закрыть", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = CardWhite
+            containerColor = if (isDarkTheme) DarkCard else CardWhite // <-- ИСПРАВЛЕНО
         )
     }
 }
@@ -1564,6 +1564,7 @@ fun AnalyticsScreen(
 @Composable
 fun CalendarView(
     transactions: List<TransactionEntity>,
+    categories: List<Category>,
     isDarkTheme: Boolean
 ) {
     // Храним текущую дату (месяц и год)
@@ -1571,6 +1572,7 @@ fun CalendarView(
 
     val currentMonth = currentCalendar.get(java.util.Calendar.MONTH)
     val currentYear = currentCalendar.get(java.util.Calendar.YEAR)
+    var selectedDay by remember { mutableStateOf<Int?>(null) }
 
     // Копируем календарь для вычислений
     val calcCalendar = currentCalendar.clone() as java.util.Calendar
@@ -1656,7 +1658,8 @@ fun CalendarView(
                                     .background(
                                         if (expense > 0) Color(0xFF7B3AF1).copy(alpha = 0.1f + 0.6f * intensity)
                                         else Color.Transparent
-                                    ),
+                                    )
+                                    .clickable { selectedDay = dayNumber },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -1673,5 +1676,72 @@ fun CalendarView(
                 }
             }
         }
+    }
+
+    // Окно с деталями дня
+    if (selectedDay != null) {
+        val dayTransactions = transactions.filter {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.date }
+            cal.get(java.util.Calendar.MONTH) == currentMonth &&
+                    cal.get(java.util.Calendar.YEAR) == currentYear &&
+                    cal.get(java.util.Calendar.DAY_OF_MONTH) == selectedDay &&
+                    it.type == "EXPENSE"
+        }
+
+        AlertDialog(
+            onDismissRequest = { selectedDay = null },
+            title = {
+                Text(
+                    text = "Траты за $selectedDay ${java.text.SimpleDateFormat("MMMM", java.util.Locale("ru")).format(currentCalendar.time)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                if (dayTransactions.isEmpty()) {
+                    Text("В этот день не было трат.", color = TextGray)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        dayTransactions.forEach { transaction ->
+                            val categoryName = when {
+                                transaction.goalName != null -> transaction.goalName
+                                transaction.type == "INCOME" -> "Пополнение"
+                                else -> categories.find { it.id == transaction.categoryId }?.name ?: "Без категории"
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(categoryName, color = TextDark)
+                                Text(
+                                    text = "${String.format("%.2f", transaction.amount).replace('.', ',')} Br",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFE53E3E)
+                                )
+                            }
+                        }
+                        Divider(color = Color.LightGray)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Итого:", fontWeight = FontWeight.Bold, color = TextDark)
+                            Text(
+                                text = "${String.format("%.2f", dayTransactions.sumOf { it.amount }).replace('.', ',')} Br",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE53E3E)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedDay = null }) {
+                    Text("Закрыть", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = CardWhite
+        )
     }
 }
