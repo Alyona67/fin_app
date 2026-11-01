@@ -9,5 +9,6 @@ data class TransactionEntity(
     val amount: Double,
     val categoryId: Int,
     val type: String, // "EXPENSE" или "INCOME"
-    val date: Long
+    val date: Long,
+    val goalName: String? = null
 )

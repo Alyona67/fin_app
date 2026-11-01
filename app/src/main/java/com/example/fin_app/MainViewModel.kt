@@ -14,15 +14,16 @@ import kotlinx.coroutines.launch
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = DatabaseProvider.getDatabase(application).appDao()
+    private val goalDao = DatabaseProvider.getDatabase(application).goalDao()
 
-    // 1. Данные из базы
+    // 1. Транзакции
     val transactions: StateFlow<List<TransactionEntity>> = dao.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 2. Категории
     val categoriesDb: StateFlow<List<CategoryEntity>> = dao.getAllCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Преобразуем CategoryEntity в наш обычный класс Category для UI
     val categories: StateFlow<List<Category>> = categoriesDb.map { dbList ->
         dbList.map { dbCat ->
             val icon = getIconByName(dbCat.iconName)
@@ -31,24 +32,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 2. Переменная стартового баланса (должна быть объявлена ДО totalBalance)
-    private val _initialBalance = MutableStateFlow(1500.0)
-    val initialBalance: StateFlow<Double> = _initialBalance.asStateFlow()
-
-    // 3. Расчет баланса
+    // 3. Баланс (как было)
     val totalBalance: StateFlow<Double> = transactions.map { list ->
         val income = list.filter { it.type == "INCOME" }.sumOf { it.amount }
         val expense = list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-        1500.0 + income - expense // 1500 - наш стартовый баланс
+        1500.0 + income - expense
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1500.0)
 
     // 4. Валюта
     private val _currency = MutableStateFlow("Br")
     val currency: StateFlow<String> = _currency.asStateFlow()
-
-    fun setCurrency(newCurrency: String) {
-        _currency.value = newCurrency
-    }
 
     // 5. Добавление расхода
     fun addExpense(amount: Double, categoryId: Int) {
@@ -57,7 +50,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 6. Пополнение баланса (Доход)
+    // 6. Пополнение баланса
     fun addIncome(amount: Double) {
         viewModelScope.launch {
             dao.insertTransaction(TransactionEntity(amount = amount, categoryId = -1, type = "INCOME", date = System.currentTimeMillis()))
@@ -73,17 +66,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 8. Обновление лимита категории
-    fun updateCategoryLimit(categoryId: Int, newLimit: Double) {
-        viewModelScope.launch {
-            val current = categoriesDb.value.find { it.id == categoryId }
-            if (current != null) {
-                dao.insertCategory(current.copy(limitAmount = newLimit))
-            }
-        }
-    }
-
-    // 9. Удаление категории
+    // 8. Удаление категории
     fun deleteCategory(categoryId: Int) {
         viewModelScope.launch {
             val current = categoriesDb.value.find { it.id == categoryId }
@@ -93,42 +76,100 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 10. Удаление транзакции
+    // 9. Удаление транзакции
     fun deleteTransaction(transaction: TransactionEntity) {
         viewModelScope.launch {
             dao.deleteTransaction(transaction)
         }
     }
 
-    // 11. Сброс всех данных
+    // 10. Сброс данных
     fun clearAllData() {
         viewModelScope.launch {
             dao.clearAllTransactions()
         }
     }
 
-    // 12. Изменение общего баланса
-    // 12. Изменение общего баланса (через добавление корректирующей транзакции)
+    // 11. Изменение баланса
     fun setTotalBalance(newBalance: Double) {
         viewModelScope.launch {
-            val currentBalance = totalBalance.value // Текущий баланс
-            val difference = newBalance - currentBalance // Разница
+            val currentBalance = totalBalance.value
+            val difference = newBalance - currentBalance
 
-            if (difference > 0) {
-                // Если баланс увеличился, добавляем "виртуальный доход"
+            if (difference != 0.0) {
                 dao.insertTransaction(
-                    TransactionEntity(amount = difference, categoryId = -1, type = "INCOME", date = System.currentTimeMillis())
-                )
-            } else if (difference < 0) {
-                // Если баланс уменьшился, добавляем "виртуальный расход"
-                dao.insertTransaction(
-                    TransactionEntity(amount = -difference, categoryId = -1, type = "EXPENSE", date = System.currentTimeMillis())
+                    TransactionEntity(
+                        amount = kotlin.math.abs(difference),
+                        categoryId = -1,
+                        type = if (difference > 0) "INCOME" else "EXPENSE",
+                        date = System.currentTimeMillis()
+                    )
                 )
             }
         }
     }
 
-    // Вспомогательные функции для иконок
+    // 12. Обновление категории
+    fun updateCategory(categoryId: Int, newName: String, newLimit: Double, newIcon: ImageVector, newColor: Color) {
+        viewModelScope.launch {
+            val current = categoriesDb.value.find { it.id == categoryId }
+            if (current != null) {
+                val iconName = getIconName(newIcon)
+                val colorHex = String.format("#%06X", (0xFFFFFF and newColor.toArgb()))
+                dao.insertCategory(
+                    current.copy(
+                        name = newName,
+                        limitAmount = newLimit,
+                        iconName = iconName,
+                        colorHex = colorHex
+                    )
+                )
+            }
+        }
+    }
+
+    // --- ЦЕЛИ ---
+    val goals: StateFlow<List<GoalEntity>> = goalDao.getAllGoals()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addGoal(name: String, targetAmount: Double, emoji: String) {
+        viewModelScope.launch {
+            goalDao.insertGoal(GoalEntity(name = name, targetAmount = targetAmount, emoji = emoji))
+        }
+    }
+
+    fun addMoneyToGoal(goal: GoalEntity, amount: Double) {
+        viewModelScope.launch {
+            val newCurrentAmount = goal.currentAmount + amount
+            goalDao.updateGoal(goal.copy(currentAmount = newCurrentAmount))
+            dao.insertTransaction(
+                TransactionEntity(
+                    amount = amount,
+                    categoryId = -3,
+                    type = "EXPENSE",
+                    date = System.currentTimeMillis(),
+                    goalName = goal.name
+                )
+            )
+        }
+    }
+
+    fun deleteGoal(goal: GoalEntity) {
+        viewModelScope.launch {
+            val isCompleted = goal.currentAmount >= goal.targetAmount
+            if (!isCompleted && goal.currentAmount > 0) {
+                dao.insertTransaction(TransactionEntity(amount = goal.currentAmount, categoryId = -2, type = "INCOME", date = System.currentTimeMillis()))
+            }
+            goalDao.deleteGoal(goal)
+        }
+    }
+
+    fun markGoalAsCongratulated(goal: GoalEntity) {
+        viewModelScope.launch {
+            goalDao.updateGoal(goal.copy(isCongratulated = true))
+        }
+    }
+
     private fun getIconByName(name: String): ImageVector {
         return when (name) {
             "Home" -> Icons.Filled.Home
@@ -154,25 +195,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Icons.Filled.Flight -> "Flight"
             Icons.Filled.Pets -> "Pets"
             else -> "Star"
-        }
-    }
-
-    // 13. Полное обновление категории
-    fun updateCategory(categoryId: Int, newName: String, newLimit: Double, newIcon: ImageVector, newColor: Color) {
-        viewModelScope.launch {
-            val current = categoriesDb.value.find { it.id == categoryId }
-            if (current != null) {
-                val iconName = getIconName(newIcon)
-                val colorHex = String.format("#%06X", (0xFFFFFF and newColor.toArgb()))
-                dao.insertCategory(
-                    current.copy(
-                        name = newName,
-                        limitAmount = newLimit,
-                        iconName = iconName,
-                        colorHex = colorHex
-                    )
-                )
-            }
         }
     }
 }

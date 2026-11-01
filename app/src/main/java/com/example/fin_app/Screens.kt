@@ -508,8 +508,23 @@ fun HistoryScreen(
 ) {
     val transactions by viewModel.transactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
-
+    var searchQuery by remember { mutableStateOf("") }
     var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
+
+    // Фильтруем и сортируем (с поддержкой поиска по целям)
+    val filteredTransactions = transactions
+        .filter { transaction ->
+            if (searchQuery.isBlank()) return@filter true
+
+            val searchText = when {
+                transaction.goalName != null -> transaction.goalName
+                transaction.type == "INCOME" -> "Пополнение"
+                else -> categories.find { it.id == transaction.categoryId }?.name ?: ""
+            }
+
+            searchText.contains(searchQuery, ignoreCase = true)
+        }
+        .sortedByDescending { it.date }
 
     val currentBg = if (isDarkTheme) DarkBg else LavenderBg
     val currentTextColor = if (isDarkTheme) Color.White else TextDark
@@ -520,18 +535,44 @@ fun HistoryScreen(
             Text("История", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (transactions.isEmpty()) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Поиск по категориям и целям...", color = TextGray) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = TextGray) },
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GradientPurpleStart,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = currentCardColor,
+                    unfocusedContainerColor = currentCardColor,
+                    focusedTextColor = currentTextColor,
+                    unfocusedTextColor = currentTextColor
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (filteredTransactions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("У вас пока нет операций", color = TextGray, fontSize = 16.sp)
+                    Text(
+                        text = if (searchQuery.isBlank()) "У вас пока нет операций" else "Ничего не найдено",
+                        color = TextGray,
+                        fontSize = 16.sp
+                    )
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(transactions) { transaction -> // transaction теперь TransactionEntity
+                    items(filteredTransactions) { transaction ->
                         val category = categories.find { it.id == transaction.categoryId }
-                        val title = if (transaction.type == "INCOME") "Пополнение" else (category?.name ?: "Без категории")
+                        val title = when {
+                            transaction.goalName != null -> transaction.goalName
+                            transaction.type == "INCOME" -> "Пополнение"
+                            else -> category?.name ?: "Без категории"
+                        }
                         val icon = if (transaction.type == "INCOME") Icons.Filled.Add else (category?.icon ?: Icons.Filled.Star)
                         val color = if (transaction.type == "INCOME") Color(0xFF38A169) else (category?.color ?: TextGray)
                         val amountText = if (transaction.type == "INCOME") "+${String.format("%.2f", transaction.amount)} Br" else "-${String.format("%.2f", transaction.amount)} Br"
@@ -996,10 +1037,11 @@ fun CategoryActionSheet(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 // Кнопка перехода в режим редактирования
+                // Кнопка перехода в режим редактирования
                 TextButton(
                     onClick = { isEditing = true },
                     modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) { Text("Редактировать категорию", color = GradientPurpleStart, fontWeight = FontWeight.Medium) }
+                ) { Text("Редактировать категорию", color = category.color, fontWeight = FontWeight.Medium) }
             }
         }
     }
@@ -1044,5 +1086,261 @@ fun formatTransactionDate(timestamp: Long): String {
             val sdfDate = SimpleDateFormat("d MMMM", Locale("ru")) // Например "12 мая"
             "${sdfDate.format(Date(timestamp))}, $timeString"
         }
+    }
+}
+
+@Composable
+fun GoalsScreen(
+    viewModel: MainViewModel = viewModel(),
+    isDarkTheme: Boolean = false
+) {
+    val goals by viewModel.goals.collectAsState()
+    var showAddGoalDialog by remember { mutableStateOf(false) }
+    var showAddMoneyDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var selectedGoalForMoney by remember { mutableStateOf<GoalEntity?>(null) }
+    var selectedGoalForDelete by remember { mutableStateOf<GoalEntity?>(null) }
+    var completedGoalName by remember { mutableStateOf<String?>(null) }
+
+    val currentBg = if (isDarkTheme) DarkBg else LavenderBg
+    val currentTextColor = if (isDarkTheme) Color.White else TextDark
+    val currentCardColor = if (isDarkTheme) DarkCard else CardWhite
+
+    Box(modifier = Modifier.fillMaxSize().background(currentBg)) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            Text("Мои цели", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (goals.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("У вас пока нет целей. Добавьте первую!", color = TextGray, fontSize = 16.sp)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp)) {
+                    items(goals) { goal ->
+                        val progress = if (goal.targetAmount > 0) (goal.currentAmount / goal.targetAmount).toFloat() else 0f
+                        val isCompleted = progress >= 1f
+
+                        LaunchedEffect(isCompleted, goal.isCongratulated) {
+                            if (isCompleted && !goal.isCongratulated) {
+                                completedGoalName = goal.name
+                                viewModel.markGoalAsCongratulated(goal)
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(4.dp, RoundedCornerShape(24.dp), ambientColor = Color.LightGray.copy(alpha = 0.3f))
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(currentCardColor)
+                                .padding(20.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(goal.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = currentTextColor)
+                                        Text(
+                                            "${String.format("%.0f", goal.currentAmount)} / ${goal.targetAmount} Br",
+                                            fontSize = 14.sp,
+                                            color = if (isCompleted) Color(0xFF38A169) else TextGray
+                                        )
+                                    }
+                                    IconButton(onClick = { selectedGoalForDelete = goal; showDeleteDialog = true }) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "Удалить", tint = Color.Red.copy(alpha = 0.5f))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                LinearProgressIndicator(
+                                    progress = { progress.coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
+                                    color = if (isCompleted) Color(0xFF38A169) else GradientPurpleStart,
+                                    trackColor = if (isDarkTheme) Color.DarkGray else LavenderBg,
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (!isCompleted) {
+                                    Button(
+                                        onClick = {
+                                            selectedGoalForMoney = goal
+                                            showAddMoneyDialog = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = GradientPurpleStart.copy(alpha = 0.1f), contentColor = GradientPurpleStart)
+                                    ) {
+                                        Text("Отложить деньги", fontWeight = FontWeight.Bold)
+                                    }
+                                } else {
+                                    Text("🎉 Цель достигнута!", color = Color(0xFF38A169), fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = { showAddGoalDialog = true },
+            containerColor = Color(0xFF6843A9),
+            shape = CircleShape,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp)
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = Color.White)
+        }
+    }
+
+    // ДИАЛОГ СОЗДАНИЯ ЦЕЛИ
+    if (showAddGoalDialog) {
+        var goalName by remember { mutableStateOf("") }
+        var goalTarget by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddGoalDialog = false },
+            title = { Text("Новая цель") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = goalName, onValueChange = { goalName = it },
+                        label = { Text("Название (например, Отпуск)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = goalTarget, onValueChange = { goalTarget = it },
+                        label = { Text("Сумма цели (Br)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val target = goalTarget.toDoubleOrNull()
+                    if (goalName.isNotBlank() && target != null && target > 0) {
+                        viewModel.addGoal(goalName, target, "🎯")
+                        showAddGoalDialog = false
+                    }
+                }) {
+                    Text("Создать", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddGoalDialog = false }) {
+                    Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
+    }
+
+    // ДИАЛОГ ОТКЛАДЫВАНИЯ ДЕНЕГ
+    if (showAddMoneyDialog && selectedGoalForMoney != null) {
+        var moneyText by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddMoneyDialog = false },
+            title = { Text("Отложить на \"${selectedGoalForMoney!!.name}\"") },
+            text = {
+                OutlinedTextField(
+                    value = moneyText, onValueChange = { moneyText = it },
+                    label = { Text("Сумма (Br)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val amount = moneyText.toDoubleOrNull()
+                    if (amount != null && amount > 0) {
+                        viewModel.addMoneyToGoal(selectedGoalForMoney!!, amount)
+                        showAddMoneyDialog = false
+                    }
+                }) {
+                    Text("Отложить", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddMoneyDialog = false }) {
+                    Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
+    }
+
+    // ДИАЛОГ УДАЛЕНИЯ ЦЕЛИ
+    if (showDeleteDialog && selectedGoalForDelete != null) {
+        val isGoalCompleted = selectedGoalForDelete!!.currentAmount >= selectedGoalForDelete!!.targetAmount
+        val message = if (isGoalCompleted) {
+            "Вы уверены, что хотите удалить достигнутую цель \"${selectedGoalForDelete!!.name}\"? Деньги на баланс не вернутся, так как цель уже выполнена."
+        } else {
+            "Вы уверены, что хотите удалить цель \"${selectedGoalForDelete!!.name}\"? Накопленные деньги вернутся на баланс."
+        }
+
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Удалить цель?") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteGoal(selectedGoalForDelete!!)
+                    showDeleteDialog = false
+                }) {
+                    Text("Удалить", color = Color.Red, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Отмена", color = TextGray)
+                }
+            },
+            containerColor = CardWhite
+        )
+    }
+
+    // ОКНО ПОЗДРАВЛЕНИЯ
+    if (completedGoalName != null) {
+        AlertDialog(
+            onDismissRequest = { completedGoalName = null },
+            title = {
+                Text(
+                    text = "🎉 Поздравляем!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF38A169),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = "Ты достигла цели \"$completedGoalName\"! Гордимся твоей дисциплиной и упорством. Продолжай в том же духе!",
+                    fontSize = 16.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { completedGoalName = null },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38A169))
+                ) {
+                    Text("Ура!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            containerColor = CardWhite
+        )
     }
 }

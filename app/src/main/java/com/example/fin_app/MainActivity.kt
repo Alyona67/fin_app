@@ -132,13 +132,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
                 HistoryScreen(viewModel = viewModel, isDarkTheme = isDarkTheme)
             }
             composable("goals") {
-                // Временная заглушка для Целей (переход из профиля)
-                Box(
-                    modifier = Modifier.padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Экран Целей (в разработке)", color = if (isDarkTheme) Color.White else Color.Black)
-                }
+                GoalsScreen(viewModel = viewModel, isDarkTheme = isDarkTheme)
             }
             composable("profile") {
                 ProfileScreen(
