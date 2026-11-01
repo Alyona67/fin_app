@@ -139,6 +139,9 @@ fun MainAppScreen(viewModel: MainViewModel) {
             composable("goals") {
                 GoalsScreen(viewModel = viewModel, isDarkTheme = isDarkTheme)
             }
+            composable("analytics") {
+                AnalyticsScreen(viewModel = viewModel, isDarkTheme = isDarkTheme)
+            }
             composable("profile") {
                 ProfileScreen(
                     isDarkTheme = isDarkTheme,
@@ -146,7 +149,8 @@ fun MainAppScreen(viewModel: MainViewModel) {
                     onNavigateToGoals = {
                         // Переход на скрытый экран Целей
                         navController.navigate("goals")
-                    }
+                    },
+                    onNavigateToAnalytics = { navController.navigate("analytics") }
                 )
             }
         }

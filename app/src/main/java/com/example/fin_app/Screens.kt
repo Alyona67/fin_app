@@ -30,6 +30,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.cos
+import kotlin.math.sin
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 
 // ПАЛИТРА
 val LavenderBg = Color(0xFFF4F0FA)
@@ -299,7 +305,8 @@ fun ProfileScreen(
     viewModel: MainViewModel = viewModel(),
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
-    onNavigateToGoals: () -> Unit
+    onNavigateToGoals: () -> Unit,
+    onNavigateToAnalytics: () -> Unit
 ) {
     var showBalanceDialog by remember { mutableStateOf(false) }
     var newBalanceText by remember { mutableStateOf("") }
@@ -359,7 +366,7 @@ fun ProfileScreen(
 
 
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(26.dp))
         Text("Совет дня", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -382,7 +389,7 @@ fun ProfileScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(26.dp))
         Text("Инструменты", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -408,7 +415,7 @@ fun ProfileScreen(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(currentCardColor)
-                .clickable { /* TODO: Переход в аналитику */ }
+                .clickable { onNavigateToAnalytics() }
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -431,8 +438,8 @@ fun ProfileScreen(
             Icon(Icons.Filled.Edit, contentDescription = null, tint = GradientPurpleStart)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(28.dp))
+
 
         // 5. Сброс данных
         Row(
@@ -513,7 +520,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showComingSoonDialog = false },
             title = { Text("В разработке") },
-            text = { Text("Скоро здесь можно будет менять общий баланс. А пока используй кнопку «Пополнить» на главном экране или добавь трату.") },
+            text = { Text("Скоро здесь можно будет менять общий баланс. А пока используйте кнопку «Пополнить» на главном экране или добавьте трату.") },
             confirmButton = {
                 TextButton(onClick = { showComingSoonDialog = false }) {
                     Text("Понятно", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
@@ -1365,5 +1372,142 @@ fun GoalsScreen(
             },
             containerColor = CardWhite
         )
+    }
+}
+
+
+@Composable
+fun AnalyticsScreen(
+    viewModel: MainViewModel = viewModel(),
+    isDarkTheme: Boolean = false
+) {
+    val transactions by viewModel.transactions.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+
+    // Считаем траты по категориям и целям
+    val expensesByCategory = transactions
+        .filter { it.type == "EXPENSE" }
+        .groupBy {
+            if (it.categoryId == -3) -3 // Цели
+            else it.categoryId
+        }
+        .mapValues { entry -> entry.value.sumOf { it.amount } }
+
+    val totalExpense = expensesByCategory.values.sum()
+
+    val currentBg = if (isDarkTheme) DarkBg else LavenderBg
+    val currentTextColor = if (isDarkTheme) Color.White else TextDark
+    val currentCardColor = if (isDarkTheme) DarkCard else CardWhite
+
+    Box(modifier = Modifier.fillMaxSize().background(currentBg)) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            Text("Аналитика", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (totalExpense == 0.0) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Пока нет расходов для анализа", color = TextGray, fontSize = 16.sp)
+                }
+            } else {
+                // Круговая диаграмма
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(200.dp)) {
+                        var startAngle = -90f
+
+                        // Настройки для текста внутри круга
+                        val paint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.WHITE
+                            textSize = 12.sp.toPx()
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            isAntiAlias = true
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        }
+
+                        expensesByCategory.forEach { (categoryId, amount) ->
+                            val category = categories.find { it.id == categoryId }
+                            val isGoal = categoryId == -3
+                            val sweepAngle = (amount / totalExpense * 360f).toFloat()
+
+                            // Рисуем сектор
+                            drawArc(
+                                color = if (isGoal) GradientPurpleStart else (category?.color ?: Color.Gray),
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = true
+                            )
+
+                            // Рисуем процент внутри сектора
+                            if (sweepAngle > 20f) { // Показываем, если сектор достаточно большой
+                                val midAngle = startAngle + sweepAngle / 2
+                                val radius = size.minDimension / 2.5f
+                                val x = center.x + radius * kotlin.math.cos(Math.toRadians(midAngle.toDouble())).toFloat()
+                                val y = center.y + radius * kotlin.math.sin(Math.toRadians(midAngle.toDouble())).toFloat()
+
+                                // Считаем процент с 1 знаком после запятой и меняем точку на запятую
+                                val percent = String.format("%.1f", (amount / totalExpense * 100)).replace('.', ',')
+
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    "$percent%",
+                                    x, y,
+                                    paint
+                                )
+                            }
+                            startAngle += sweepAngle
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Легенда с суммами
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(expensesByCategory.toList().sortedByDescending { it.second }) { (categoryId, amount) ->
+                        val category = categories.find { it.id == categoryId }
+                        val isGoal = categoryId == -3
+
+                        // Процент с 1 знаком после запятой
+                        val percentStr = String.format("%.1f", (amount / totalExpense * 100)).replace('.', ',')
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(currentCardColor)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isGoal) GradientPurpleStart else (category?.color ?: Color.Gray))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(if (isGoal) "Цели" else (category?.name ?: "Без категории"), color = currentTextColor)
+                                    Text(
+                                        text = "${String.format("%.2f", amount).replace('.', ',')} Br",
+                                        fontSize = 12.sp,
+                                        color = TextGray
+                                    )
+                                }
+                            }
+                            Text(
+                                "$percentStr%",
+                                color = if (isGoal) GradientPurpleStart else (category?.color ?: Color.Gray),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
