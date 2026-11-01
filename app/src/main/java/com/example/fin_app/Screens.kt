@@ -815,9 +815,10 @@ fun AddCategorySheet(onDismiss: () -> Unit, onSave: (String, Double, ImageVector
     )
 
     val availableColors = listOf(
-        Color(0xFFE53E3E), Color(0xFFDD6B20), Color(0xFFD69E2E), Color(0xFF38A169),
-        Color(0xFF3182CE), Color(0xFF805AD5), Color(0xFFD53F8C), Color(0xFF319795),
-        Color(0xFF0B2F75), Color(0xFF750DBE)
+        Color(0xFFEA3232), Color(0xFFE86C1C), Color(0xFFE0A228), Color(0xFF31AF6D),
+        Color(0xFF2681DA), Color(0xFF6E40DA), Color(0xFFD53F8C), Color(0xFF36B6B3),
+        Color(0xFF0B2F75), Color(0xFF750DBE), Color(0xFF33D509), Color(0xFF79081E),
+        Color(0xFF04C8E1), Color(0xFF867555), Color(0xFF7E4A6B), Color(0xFFC7DC2A)
     )
 
     var selectedIcon by remember { mutableStateOf(availableIcons.first()) }
@@ -1388,6 +1389,7 @@ fun AnalyticsScreen(
 ) {
     val transactions by viewModel.transactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    var showCalendar by remember { mutableStateOf(false) }
 
     // Считаем траты по категориям и целям
     val expensesByCategory = transactions
@@ -1406,7 +1408,28 @@ fun AnalyticsScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(currentBg)) {
         Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-            Text("Аналитика", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Аналитика", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
+
+                // Кнопка-иконка календаря
+                IconButton(
+                    onClick = { showCalendar = true },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (isDarkTheme) DarkCard else CardWhite)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DateRange,
+                        contentDescription = "Календарь трат",
+                        tint = GradientPurpleStart
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(24.dp))
 
             if (totalExpense == 0.0) {
@@ -1421,7 +1444,7 @@ fun AnalyticsScreen(
                         .height(250.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Canvas(modifier = Modifier.size(200.dp)) {
+                    Canvas(modifier = Modifier.size(240.dp)) {
                         var startAngle = -90f
 
                         // Настройки для текста внутри круга
@@ -1514,5 +1537,32 @@ fun AnalyticsScreen(
                 }
             }
         }
+    }
+
+    // ОКНО КАЛЕНДАРЯ
+    if (showCalendar) {
+        AlertDialog(
+            onDismissRequest = { showCalendar = false },
+            title = { Text("Календарь трат", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                // Здесь будет календарь (пока просто заглушка)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isDarkTheme) DarkCard else LavenderBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Календарь в разработке...", color = TextGray)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCalendar = false }) {
+                    Text("Закрыть", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = CardWhite
+        )
     }
 }
