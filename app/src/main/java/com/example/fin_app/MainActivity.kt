@@ -103,6 +103,11 @@ fun MainAppScreen(viewModel: MainViewModel) {
                                 launchSingleTop = true
                                 restoreState = true
                             }
+
+                            // Если нажали на Профиль, принудительно закрываем Цели (если они открыты)
+                            if (item.route == "profile") {
+                                navController.popBackStack("profile", inclusive = false)
+                            }
                         }
                     )
                 }
