@@ -1545,17 +1545,11 @@ fun AnalyticsScreen(
             onDismissRequest = { showCalendar = false },
             title = { Text("Календарь трат", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
             text = {
-                // Здесь будет календарь (пока просто заглушка)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (isDarkTheme) DarkCard else LavenderBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Календарь в разработке...", color = TextGray)
-                }
+                // ВЫЗЫВАЕМ НАШ КАЛЕНДАРЬ
+                CalendarView(
+                    transactions = transactions,
+                    isDarkTheme = isDarkTheme
+                )
             },
             confirmButton = {
                 TextButton(onClick = { showCalendar = false }) {
@@ -1564,5 +1558,120 @@ fun AnalyticsScreen(
             },
             containerColor = CardWhite
         )
+    }
+}
+
+@Composable
+fun CalendarView(
+    transactions: List<TransactionEntity>,
+    isDarkTheme: Boolean
+) {
+    // Храним текущую дату (месяц и год)
+    var currentCalendar by remember { mutableStateOf(java.util.Calendar.getInstance()) }
+
+    val currentMonth = currentCalendar.get(java.util.Calendar.MONTH)
+    val currentYear = currentCalendar.get(java.util.Calendar.YEAR)
+
+    // Копируем календарь для вычислений
+    val calcCalendar = currentCalendar.clone() as java.util.Calendar
+    calcCalendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
+    val firstDayOfWeek = calcCalendar.get(java.util.Calendar.DAY_OF_WEEK)
+    val daysInMonth = calcCalendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+
+    // Группируем траты по дням для выбранного месяца
+    val expensesByDay = transactions
+        .filter {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.date }
+            cal.get(java.util.Calendar.MONTH) == currentMonth && cal.get(java.util.Calendar.YEAR) == currentYear && it.type == "EXPENSE"
+        }
+        .groupBy {
+            java.util.Calendar.getInstance().apply { timeInMillis = it.date }.get(java.util.Calendar.DAY_OF_MONTH)
+        }
+        .mapValues { entry -> entry.value.sumOf { it.amount } }
+
+    val maxExpense = expensesByDay.values.maxOrNull() ?: 1.0
+    val textColor = if (isDarkTheme) Color.White else TextDark
+
+    Column {
+        // Заголовок с переключением месяцев
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {
+                val newCal = currentCalendar.clone() as java.util.Calendar
+                newCal.add(java.util.Calendar.MONTH, -1)
+                currentCalendar = newCal
+            }) {
+                Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Назад", tint = textColor)
+            }
+
+            Text(
+                text = java.text.SimpleDateFormat("LLLL yyyy", java.util.Locale("ru")).format(currentCalendar.time).replaceFirstChar { it.uppercase() },
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+
+            IconButton(onClick = {
+                val newCal = currentCalendar.clone() as java.util.Calendar
+                newCal.add(java.util.Calendar.MONTH, 1)
+                currentCalendar = newCal
+            }) {
+                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Вперед", tint = textColor)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Сетка дней
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Дни недели
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс").forEach { day ->
+                    Text(day, fontSize = 12.sp, color = TextGray, modifier = Modifier.width(36.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+
+            // Пустые ячейки до первого дня
+            val dayOffset = if (firstDayOfWeek == 1) 6 else firstDayOfWeek - 2
+            val totalCells = dayOffset + daysInMonth
+            val rows = (totalCells + 6) / 7
+
+            for (row in 0 until rows) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    for (col in 0 until 7) {
+                        val cellIndex = row * 7 + col
+                        val dayNumber = cellIndex - dayOffset + 1
+
+                        if (dayNumber in 1..daysInMonth) {
+                            val expense = expensesByDay[dayNumber] ?: 0.0
+                            val intensity = if (maxExpense > 0) (expense / maxExpense).toFloat() else 0f
+
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (expense > 0) Color(0xFF7B3AF1).copy(alpha = 0.1f + 0.6f * intensity)
+                                        else Color.Transparent
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = dayNumber.toString(),
+                                    color = if (expense > 0.7 * maxExpense) Color.White else textColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (expense > 0) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.size(36.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
