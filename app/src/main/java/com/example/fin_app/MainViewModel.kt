@@ -16,11 +16,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = DatabaseProvider.getDatabase(application).appDao()
     private val goalDao = DatabaseProvider.getDatabase(application).goalDao()
 
-    // 1. Транзакции
     val transactions: StateFlow<List<TransactionEntity>> = dao.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 2. Категории
     val categoriesDb: StateFlow<List<CategoryEntity>> = dao.getAllCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -32,32 +30,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 3. Баланс (как было)
     val totalBalance: StateFlow<Double> = transactions.map { list ->
         val income = list.filter { it.type == "INCOME" }.sumOf { it.amount }
         val expense = list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
         1500.0 + income - expense
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1500.0)
 
-    // 4. Валюта
-    private val _currency = MutableStateFlow("Br")
+    private val _currency = MutableStateFlow("BYN")
     val currency: StateFlow<String> = _currency.asStateFlow()
 
-    // 5. Добавление расхода
     fun addExpense(amount: Double, categoryId: Int) {
         viewModelScope.launch {
             dao.insertTransaction(TransactionEntity(amount = amount, categoryId = categoryId, type = "EXPENSE", date = System.currentTimeMillis()))
         }
     }
 
-    // 6. Пополнение баланса
     fun addIncome(amount: Double) {
         viewModelScope.launch {
             dao.insertTransaction(TransactionEntity(amount = amount, categoryId = -1, type = "INCOME", date = System.currentTimeMillis()))
         }
     }
 
-    // 7. Добавление категории
     fun addCategory(name: String, limit: Double, icon: ImageVector, color: Color) {
         viewModelScope.launch {
             val iconName = getIconName(icon)
@@ -66,7 +59,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 8. Удаление категории
     fun deleteCategory(categoryId: Int) {
         viewModelScope.launch {
             val current = categoriesDb.value.find { it.id == categoryId }
@@ -76,21 +68,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 9. Удаление транзакции
     fun deleteTransaction(transaction: TransactionEntity) {
         viewModelScope.launch {
             dao.deleteTransaction(transaction)
         }
     }
 
-    // 10. Сброс данных
     fun clearAllData() {
         viewModelScope.launch {
             dao.clearAllTransactions()
         }
     }
 
-    // 11. Изменение баланса
     fun setTotalBalance(newBalance: Double) {
         viewModelScope.launch {
             val currentBalance = totalBalance.value
@@ -109,7 +98,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 12. Обновление категории
     fun updateCategory(categoryId: Int, newName: String, newLimit: Double, newIcon: ImageVector, newColor: Color) {
         viewModelScope.launch {
             val current = categoriesDb.value.find { it.id == categoryId }
@@ -128,7 +116,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- ЦЕЛИ ---
     val goals: StateFlow<List<GoalEntity>> = goalDao.getAllGoals()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -198,15 +185,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Экспорт в CSV
-    // Экспорт в CSV (принимает списки из UI)
     fun exportToCsv(
         transactions: List<TransactionEntity>,
         categories: List<Category>
     ): java.io.File? {
         if (transactions.isEmpty()) return null
 
-        val csvHeader = "Дата;Категория;Сумма (Br);Тип\n"
+        val csvHeader = "Дата;Категория;Сумма (BYN);Тип\n"
         val csvBody = transactions.joinToString("\n") { transaction ->
             val date = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(transaction.date))
             val categoryName = when {
@@ -218,7 +203,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "$date;$categoryName;${transaction.amount};$type"
         }
 
-        // Добавляем BOM (Byte Order Mark) для корректного отображения кириллицы в Excel
         val bom = "\uFEFF"
         val csvContent = bom + csvHeader + csvBody
 

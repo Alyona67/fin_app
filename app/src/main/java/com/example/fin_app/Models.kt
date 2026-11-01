@@ -16,7 +16,7 @@ data class Transaction(
     val id: Long = System.currentTimeMillis(),
     val amount: Double,
     val categoryId: Int,
-    val type: TransactionType = TransactionType.EXPENSE, // По умолчанию - расход
+    val type: TransactionType = TransactionType.EXPENSE,
     val date: Long = System.currentTimeMillis()
 )
 
@@ -28,7 +28,6 @@ data class Category(
     val limit: Double
 )
 
-// Базовые категории
 val defaultCategories = listOf(
     Category(1, "Продукты", Icons.Filled.Home, Color(0xFF4CAF50), 150.0),
     Category(2, "Здоровье", Icons.Filled.Favorite, Color(0xFFFF9800), 50.0),

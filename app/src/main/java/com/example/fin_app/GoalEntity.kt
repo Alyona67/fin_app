@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 data class GoalEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val targetAmount: Double, // Сколько нужно накопить
-    val currentAmount: Double = 0.0, // Сколько уже накоплено
-    val emoji: String, // Иконка цели (например, "✈️")
+    val targetAmount: Double,
+    val currentAmount: Double = 0.0,
+    val emoji: String,
     val isCongratulated: Boolean = false
 )

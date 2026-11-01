@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class CategoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val iconName: String, // Название иконки
-    val colorHex: String, // Цвет в HEX
+    val iconName: String,
+    val colorHex: String,
     val limitAmount: Double
 )

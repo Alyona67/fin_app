@@ -33,7 +33,6 @@ import java.util.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.nativeCanvas
 
-// ПАЛИТРА
 val LavenderBg = Color(0xFFF4F0FA)
 val GradientPurpleStart = Color(0xFF7B3AF1)
 val GradientPurpleEnd = Color(0xFF9979E5)
@@ -42,11 +41,10 @@ val TextDark = Color(0xFF2D3748)
 val TextGray = Color(0xFF718096)
 val CardWhite = Color(0xFFFFFFFF)
 
-// Цвета для темной темы
 val DarkBg = Color(0xFF121212)
 val DarkCard = Color(0xFF1E1E24)
-val DarkCardBorder = Color(0xFF2A2A35) // Для обводки карточек
-val DarkGradientStart = Color(0xA12B1556) // Приглушенный фиолетовый
+val DarkCardBorder = Color(0xFF2A2A35)
+val DarkGradientStart = Color(0xA12B1556)
 val DarkGradientEnd = Color(0xA4381852)
 
 @Composable
@@ -77,7 +75,6 @@ fun DashboardScreen(
             contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
         ) {
             item {
-                // КАРТОЧКА БАЛАНСА
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -112,7 +109,7 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "${String.format("%.2f", balance).replace('.', ',')} Br",
+                            text = "${String.format("%.2f", balance).replace('.', ',')} BYN",
                             color = Color.White,
                             fontSize = 40.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -165,7 +162,7 @@ fun DashboardScreen(
                             ) {
                                 Text(category.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = currentTextColor)
                                 Text(
-                                    text = "${String.format("%.0f", spent)} / ${category.limit} Br",
+                                    text = "${String.format("%.2f", spent).replace('.', ',')} / ${String.format("%.2f", category.limit).replace('.', ',')} BYN",
                                     color = if (isOverLimit) Color(0xFFE53E3E) else TextGray,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -218,7 +215,7 @@ fun BudgetsScreen(
             if (categories.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "У вас пока нет категорий. Добавьте первую!",
+                        text = "У вас пока нет категорий",
                         color = TextGray,
                         fontSize = 16.sp
                     )
@@ -257,11 +254,11 @@ fun BudgetsScreen(
                                     Spacer(Modifier.width(12.dp))
                                     Column {
                                         Text(category.name, fontWeight = FontWeight.Bold, color = currentTextColor)
-                                        Text("Лимит: ${category.limit} Br", fontSize = 12.sp, color = TextGray)
+                                        Text("Лимит: ${String.format("%.2f", category.limit).replace('.', ',')} BYN", fontSize = 12.sp, color = TextGray)
                                     }
                                 }
                                 Text(
-                                    text = "${String.format("%.0f", spent)} Br",
+                                    text = "${String.format("%.2f", spent).replace('.', ',')} BYN",
                                     fontWeight = FontWeight.Bold,
                                     color = category.color
                                 )
@@ -298,7 +295,7 @@ fun BudgetsScreen(
                 viewModel.deleteCategory(selectedCategory!!.id)
                 selectedCategory = null
             },
-            onUpdateCategory = { name, limit, icon, color -> // <-- ИЗМЕНЕНО
+            onUpdateCategory = { name, limit, icon, color ->
                 viewModel.updateCategory(selectedCategory!!.id, name, limit, icon, color)
             }
         )
@@ -330,9 +327,8 @@ fun ProfileScreen(
         "Не сравнивай свои траты с чужими. У каждого свой бюджет и свои потребности.",
         "Откладывай 10% от любого дохода сразу, как только его получил."
     )
-    // Получаем номер дня в году (от 1 до 365)
+
     val dayOfYear = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)
-    // Выбираем совет, индекс которого зависит от дня
     val dailyTip = tips[dayOfYear % tips.size]
 
     val currentBg = if (isDarkTheme) DarkBg else LavenderBg
@@ -354,7 +350,6 @@ fun ProfileScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 1. Переключатель темы
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -378,7 +373,6 @@ fun ProfileScreen(
         Text("Совет дня", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Карточка с советом
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -401,7 +395,6 @@ fun ProfileScreen(
         Text("Инструменты", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 3. Мои цели
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -417,7 +410,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 4. Аналитика (заглушка)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -433,8 +425,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Кнопка Экспорта
-        // Кнопка Экспорта
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -444,7 +434,6 @@ fun ProfileScreen(
                     val file = viewModel.exportToCsv(transactions, categories)
                     if (file != null) {
                         try {
-                            // Используем context.packageName для authorities
                             val uri = androidx.core.content.FileProvider.getUriForFile(
                                 context,
                                 "${context.packageName}.provider",
@@ -457,12 +446,10 @@ fun ProfileScreen(
                             }
                             context.startActivity(android.content.Intent.createChooser(intent, "Экспорт данных"))
                         } catch (e: Exception) {
-                            // Если произошла ошибка — показываем её
                             android.widget.Toast.makeText(context, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                             e.printStackTrace()
                         }
                     } else {
-                        // Если файл не создался (нет транзакций)
                         android.widget.Toast.makeText(context, "Нет данных для экспорта", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -480,7 +467,7 @@ fun ProfileScreen(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(currentCardColor)
-                .clickable { showComingSoonDialog = true } // <-- ОТКРЫВАЕМ ОКНО
+                .clickable { showComingSoonDialog = true }
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -491,8 +478,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(36.dp))
 
-
-        // 5. Сброс данных
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -508,7 +493,6 @@ fun ProfileScreen(
         }
     }
 
-    // Диалог подтверждения сброса
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
@@ -566,7 +550,6 @@ fun ProfileScreen(
         )
     }
 
-    // Окно "Скоро здесь можно будет менять баланс"
     if (showComingSoonDialog) {
         AlertDialog(
             onDismissRequest = { showComingSoonDialog = false },
@@ -592,7 +575,6 @@ fun HistoryScreen(
     var searchQuery by remember { mutableStateOf("") }
     var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
 
-    // Фильтруем и сортируем (с поддержкой поиска по целям)
     val filteredTransactions = transactions
         .filter { transaction ->
             if (searchQuery.isBlank()) return@filter true
@@ -656,7 +638,11 @@ fun HistoryScreen(
                         }
                         val icon = if (transaction.type == "INCOME") Icons.Filled.Add else (category?.icon ?: Icons.Filled.Star)
                         val color = if (transaction.type == "INCOME") Color(0xFF38A169) else (category?.color ?: TextGray)
-                        val amountText = if (transaction.type == "INCOME") "+${String.format("%.2f", transaction.amount)} Br" else "-${String.format("%.2f", transaction.amount)} Br"
+                        val amountText = if (transaction.type == "INCOME") {
+                            "+${String.format("%.2f", transaction.amount).replace('.', ',')} BYN"
+                        } else {
+                            "-${String.format("%.2f", transaction.amount).replace('.', ',')} BYN"
+                        }
 
                         Box(
                             modifier = Modifier
@@ -717,7 +703,7 @@ fun HistoryScreen(
         }
     }
 
-    // Окно подтверждения удаления
+
     if (transactionToDelete != null) {
         AlertDialog(
             onDismissRequest = { transactionToDelete = null },
@@ -745,7 +731,6 @@ fun HistoryScreen(
     }
 }
 
-// ОКНА
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionSheet(
@@ -763,7 +748,7 @@ fun AddTransactionSheet(
 
             OutlinedTextField(
                 value = amountText, onValueChange = { amountText = it },
-                label = { Text("Сумма (Br)") },
+                label = { Text("Сумма (BYN)") },
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -825,7 +810,7 @@ fun AddIncomeSheet(onDismiss: () -> Unit, onSave: (Double) -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
             OutlinedTextField(
                 value = amountText, onValueChange = { amountText = it },
-                label = { Text("Сумма дохода (Br)") },
+                label = { Text("Сумма дохода (BYN)") },
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -892,7 +877,7 @@ fun AddCategorySheet(onDismiss: () -> Unit, onSave: (String, Double, ImageVector
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = limitText, onValueChange = { limitText = it },
-                label = { Text("Бюджет на месяц (Br)") },
+                label = { Text("Бюджет на месяц (BYN)") },
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -968,13 +953,12 @@ fun CategoryActionSheet(
     onDismiss: () -> Unit,
     onAddExpense: (Double) -> Unit,
     onDelete: () -> Unit,
-    onUpdateCategory: (String, Double, ImageVector, Color) -> Unit // <-- НОВЫЙ КОЛЛБЭК
+    onUpdateCategory: (String, Double, ImageVector, Color) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var isEditing by remember { mutableStateOf(false) } // <-- Режим редактирования
+    var isEditing by remember { mutableStateOf(false) }
 
-    // Поля для редактирования
     var editName by remember { mutableStateOf(category.name) }
     var editLimit by remember { mutableStateOf(category.limit.toString()) }
     var editIcon by remember { mutableStateOf(category.icon) }
@@ -995,7 +979,6 @@ fun CategoryActionSheet(
             modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ЗАГОЛОВОК
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1009,11 +992,10 @@ fun CategoryActionSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(category.name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                        Text("Текущий лимит: ${category.limit} Br", fontSize = 14.sp, color = TextGray)
+                        Text("Текущий лимит: ${String.format("%.2f", category.limit).replace('.', ',')} BYN", fontSize = 14.sp, color = TextGray)
                     }
                 }
 
-                // Кнопка удаления (только если нет трат и не в режиме редактирования)
                 if (!hasExpenses && !isEditing) {
                     IconButton(
                         onClick = { showDeleteDialog = true },
@@ -1026,7 +1008,6 @@ fun CategoryActionSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- РЕЖИМ РЕДАКТИРОВАНИЯ ---
             if (isEditing) {
                 OutlinedTextField(
                     value = editName, onValueChange = { editName = it },
@@ -1037,7 +1018,7 @@ fun CategoryActionSheet(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = editLimit, onValueChange = { editLimit = it },
-                    label = { Text("Лимит (Br)") },
+                    label = { Text("Лимит (BYN)") },
                     shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -1098,10 +1079,9 @@ fun CategoryActionSheet(
                 }
 
             } else {
-                // --- ОБЫЧНЫЙ РЕЖИМ (Добавление траты) ---
                 OutlinedTextField(
                     value = amountText, onValueChange = { amountText = it },
-                    label = { Text("Сумма расхода (Br)") },
+                    label = { Text("Сумма расхода (BYN)") },
                     shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -1118,8 +1098,6 @@ fun CategoryActionSheet(
                 ) { Text("Добавить расход", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                // Кнопка перехода в режим редактирования
-                // Кнопка перехода в режим редактирования
                 TextButton(
                     onClick = { isEditing = true },
                     modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -1128,7 +1106,6 @@ fun CategoryActionSheet(
         }
     }
 
-    // Диалог удаления
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -1228,7 +1205,7 @@ fun GoalsScreen(
                                     Column {
                                         Text(goal.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = currentTextColor)
                                         Text(
-                                            "${String.format("%.0f", goal.currentAmount)} / ${goal.targetAmount} Br",
+                                            "${String.format("%.2f", goal.currentAmount).replace('.', ',')} / ${String.format("%.2f", goal.targetAmount).replace('.', ',')} BYN",
                                             fontSize = 14.sp,
                                             color = if (isCompleted) Color(0xFF38A169) else TextGray
                                         )
@@ -1278,7 +1255,7 @@ fun GoalsScreen(
         }
     }
 
-    // ДИАЛОГ СОЗДАНИЯ ЦЕЛИ
+
     if (showAddGoalDialog) {
         var goalName by remember { mutableStateOf("") }
         var goalTarget by remember { mutableStateOf("") }
@@ -1297,7 +1274,7 @@ fun GoalsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = goalTarget, onValueChange = { goalTarget = it },
-                        label = { Text("Сумма цели (Br)") },
+                        label = { Text("Сумма цели (BYN)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -1324,7 +1301,6 @@ fun GoalsScreen(
         )
     }
 
-    // ДИАЛОГ ОТКЛАДЫВАНИЯ ДЕНЕГ
     if (showAddMoneyDialog && selectedGoalForMoney != null) {
         var moneyText by remember { mutableStateOf("") }
 
@@ -1334,7 +1310,7 @@ fun GoalsScreen(
             text = {
                 OutlinedTextField(
                     value = moneyText, onValueChange = { moneyText = it },
-                    label = { Text("Сумма (Br)") },
+                    label = { Text("Сумма (BYN)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1360,7 +1336,6 @@ fun GoalsScreen(
         )
     }
 
-    // ДИАЛОГ УДАЛЕНИЯ ЦЕЛИ
     if (showDeleteDialog && selectedGoalForDelete != null) {
         val isGoalCompleted = selectedGoalForDelete!!.currentAmount >= selectedGoalForDelete!!.targetAmount
         val message = if (isGoalCompleted) {
@@ -1390,7 +1365,6 @@ fun GoalsScreen(
         )
     }
 
-    // ОКНО ПОЗДРАВЛЕНИЯ
     if (completedGoalName != null) {
         AlertDialog(
             onDismissRequest = { completedGoalName = null },
@@ -1427,7 +1401,6 @@ fun GoalsScreen(
     }
 }
 
-
 @Composable
 fun AnalyticsScreen(
     viewModel: MainViewModel = viewModel(),
@@ -1437,7 +1410,6 @@ fun AnalyticsScreen(
     val categories by viewModel.categories.collectAsState()
     var showCalendar by remember { mutableStateOf(false) }
 
-    // Считаем траты по категориям и целям
     val expensesByCategory = transactions
         .filter { it.type == "EXPENSE" }
         .groupBy {
@@ -1461,7 +1433,6 @@ fun AnalyticsScreen(
             ) {
                 Text("Аналитика", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = currentTextColor)
 
-                // Кнопка-иконка календаря
                 IconButton(
                     onClick = { showCalendar = true },
                     modifier = Modifier
@@ -1483,7 +1454,6 @@ fun AnalyticsScreen(
                     Text("Пока нет расходов для анализа", color = TextGray, fontSize = 16.sp)
                 }
             } else {
-                // Круговая диаграмма
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1493,7 +1463,6 @@ fun AnalyticsScreen(
                     Canvas(modifier = Modifier.size(240.dp)) {
                         var startAngle = -90f
 
-                        // Настройки для текста внутри круга
                         val paint = android.graphics.Paint().apply {
                             color = android.graphics.Color.WHITE
                             textSize = 12.sp.toPx()
@@ -1507,7 +1476,6 @@ fun AnalyticsScreen(
                             val isGoal = categoryId == -3
                             val sweepAngle = (amount / totalExpense * 360f).toFloat()
 
-                            // Рисуем сектор
                             drawArc(
                                 color = if (isGoal) GradientPurpleStart else (category?.color ?: Color.Gray),
                                 startAngle = startAngle,
@@ -1515,14 +1483,12 @@ fun AnalyticsScreen(
                                 useCenter = true
                             )
 
-                            // Рисуем процент внутри сектора
-                            if (sweepAngle > 20f) { // Показываем, если сектор достаточно большой
+                            if (sweepAngle > 20f) {
                                 val midAngle = startAngle + sweepAngle / 2
                                 val radius = size.minDimension / 2.5f
                                 val x = center.x + radius * kotlin.math.cos(Math.toRadians(midAngle.toDouble())).toFloat()
                                 val y = center.y + radius * kotlin.math.sin(Math.toRadians(midAngle.toDouble())).toFloat()
 
-                                // Считаем процент с 1 знаком после запятой и меняем точку на запятую
                                 val percent = String.format("%.1f", (amount / totalExpense * 100)).replace('.', ',')
 
                                 drawContext.canvas.nativeCanvas.drawText(
@@ -1538,13 +1504,11 @@ fun AnalyticsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Легенда с суммами
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(expensesByCategory.toList().sortedByDescending { it.second }) { (categoryId, amount) ->
                         val category = categories.find { it.id == categoryId }
                         val isGoal = categoryId == -3
 
-                        // Процент с 1 знаком после запятой
                         val percentStr = String.format("%.1f", (amount / totalExpense * 100)).replace('.', ',')
 
                         Row(
@@ -1567,7 +1531,7 @@ fun AnalyticsScreen(
                                 Column {
                                     Text(if (isGoal) "Цели" else (category?.name ?: "Без категории"), color = currentTextColor)
                                     Text(
-                                        text = "${String.format("%.2f", amount).replace('.', ',')} Br",
+                                        text = "${String.format("%.2f", amount).replace('.', ',')} BYN",
                                         fontSize = 12.sp,
                                         color = TextGray
                                     )
@@ -1585,7 +1549,6 @@ fun AnalyticsScreen(
         }
     }
 
-    // ОКНО КАЛЕНДАРЯ
     if (showCalendar) {
         AlertDialog(
             onDismissRequest = { showCalendar = false },
@@ -1602,7 +1565,7 @@ fun AnalyticsScreen(
                     Text("Закрыть", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = if (isDarkTheme) DarkCard else CardWhite // <-- ИСПРАВЛЕНО
+            containerColor = if (isDarkTheme) DarkCard else CardWhite
         )
     }
 }
@@ -1613,20 +1576,17 @@ fun CalendarView(
     categories: List<Category>,
     isDarkTheme: Boolean
 ) {
-    // Храним текущую дату (месяц и год)
     var currentCalendar by remember { mutableStateOf(java.util.Calendar.getInstance()) }
 
     val currentMonth = currentCalendar.get(java.util.Calendar.MONTH)
     val currentYear = currentCalendar.get(java.util.Calendar.YEAR)
     var selectedDay by remember { mutableStateOf<Int?>(null) }
 
-    // Копируем календарь для вычислений
     val calcCalendar = currentCalendar.clone() as java.util.Calendar
     calcCalendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
     val firstDayOfWeek = calcCalendar.get(java.util.Calendar.DAY_OF_WEEK)
     val daysInMonth = calcCalendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
 
-    // Группируем траты по дням для выбранного месяца
     val expensesByDay = transactions
         .filter {
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.date }
@@ -1641,7 +1601,6 @@ fun CalendarView(
     val textColor = if (isDarkTheme) Color.White else TextDark
 
     Column {
-        // Заголовок с переключением месяцев
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1673,7 +1632,6 @@ fun CalendarView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Сетка дней
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Дни недели
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -1682,7 +1640,6 @@ fun CalendarView(
                 }
             }
 
-            // Пустые ячейки до первого дня
             val dayOffset = if (firstDayOfWeek == 1) 6 else firstDayOfWeek - 2
             val totalCells = dayOffset + daysInMonth
             val rows = (totalCells + 6) / 7
@@ -1724,7 +1681,6 @@ fun CalendarView(
         }
     }
 
-    // Окно с деталями дня
     if (selectedDay != null) {
         val dayTransactions = transactions.filter {
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.date }
@@ -1761,7 +1717,7 @@ fun CalendarView(
                             ) {
                                 Text(categoryName, color = TextDark)
                                 Text(
-                                    text = "${String.format("%.2f", transaction.amount).replace('.', ',')} Br",
+                                    text = "${String.format("%.2f", transaction.amount).replace('.', ',')} BYN",
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFE53E3E)
                                 )
@@ -1774,7 +1730,7 @@ fun CalendarView(
                         ) {
                             Text("Итого:", fontWeight = FontWeight.Bold, color = TextDark)
                             Text(
-                                text = "${String.format("%.2f", dayTransactions.sumOf { it.amount }).replace('.', ',')} Br",
+                                text = "${String.format("%.2f", dayTransactions.sumOf { it.amount }).replace('.', ',')} BYN",
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFE53E3E)
                             )

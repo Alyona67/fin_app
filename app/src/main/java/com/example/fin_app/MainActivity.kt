@@ -58,7 +58,6 @@ fun MainAppScreen(viewModel: MainViewModel) {
 
     var isDarkTheme by remember { mutableStateOf(false) }
 
-    // 4 вкладки внизу: Главная, Категории, История, Профиль
     val items = listOf(
         BottomNavItem("dashboard", "Главная", Icons.Filled.Home),
         BottomNavItem("budgets", "Категории", Icons.Filled.List),
@@ -105,7 +104,6 @@ fun MainAppScreen(viewModel: MainViewModel) {
                                 restoreState = true
                             }
 
-                            // Если нажали на Профиль, принудительно закрываем Цели (если они открыты)
                             if (item.route == "profile") {
                                 navController.popBackStack("profile", inclusive = false)
                             }
@@ -148,7 +146,6 @@ fun MainAppScreen(viewModel: MainViewModel) {
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onNavigateToGoals = {
-                        // Переход на скрытый экран Целей
                         navController.navigate("goals")
                     },
                     onNavigateToAnalytics = { navController.navigate("analytics") }
@@ -157,7 +154,6 @@ fun MainAppScreen(viewModel: MainViewModel) {
         }
     }
 
-    // Всплывающие окна (Bottom Sheets)
     if (showExpenseSheet) {
         AddTransactionSheet(
             onDismiss = { showExpenseSheet = false },
