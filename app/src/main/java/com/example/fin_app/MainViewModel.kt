@@ -197,4 +197,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> "Star"
         }
     }
+
+    // Экспорт в CSV
+    // Экспорт в CSV (принимает списки из UI)
+    fun exportToCsv(
+        transactions: List<TransactionEntity>,
+        categories: List<Category>
+    ): java.io.File? {
+        if (transactions.isEmpty()) return null
+
+        val csvHeader = "Дата;Категория;Сумма (Br);Тип\n"
+        val csvBody = transactions.joinToString("\n") { transaction ->
+            val date = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(transaction.date))
+            val categoryName = when {
+                transaction.goalName != null -> transaction.goalName
+                transaction.type == "INCOME" -> "Пополнение"
+                else -> categories.find { it.id == transaction.categoryId }?.name ?: "Без категории"
+            }
+            val type = if (transaction.type == "INCOME") "Доход" else "Расход"
+            "$date;$categoryName;${transaction.amount};$type"
+        }
+
+        // Добавляем BOM (Byte Order Mark) для корректного отображения кириллицы в Excel
+        val bom = "\uFEFF"
+        val csvContent = bom + csvHeader + csvBody
+
+        val fileName = "fin_app_export_${System.currentTimeMillis()}.csv"
+        val file = java.io.File(getApplication<Application>().cacheDir, fileName)
+
+        return try {
+            file.writeText(csvContent)
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }

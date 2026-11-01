@@ -316,6 +316,9 @@ fun ProfileScreen(
     var showBalanceDialog by remember { mutableStateOf(false) }
     var newBalanceText by remember { mutableStateOf("") }
     val currency by viewModel.currency.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showComingSoonDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     val tips = listOf(
@@ -429,6 +432,49 @@ fun ProfileScreen(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Кнопка Экспорта
+        // Кнопка Экспорта
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(currentCardColor)
+                .clickable {
+                    val file = viewModel.exportToCsv(transactions, categories)
+                    if (file != null) {
+                        try {
+                            // Используем context.packageName для authorities
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.provider",
+                                file
+                            )
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/csv"
+                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, "Экспорт данных"))
+                        } catch (e: Exception) {
+                            // Если произошла ошибка — показываем её
+                            android.widget.Toast.makeText(context, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            e.printStackTrace()
+                        }
+                    } else {
+                        // Если файл не создался (нет транзакций)
+                        android.widget.Toast.makeText(context, "Нет данных для экспорта", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Экспорт данных (CSV)", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
+            Icon(Icons.Filled.Share, contentDescription = null, tint = GradientPurpleStart)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -443,7 +489,7 @@ fun ProfileScreen(
             Icon(Icons.Filled.Edit, contentDescription = null, tint = GradientPurpleStart)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(36.dp))
 
 
         // 5. Сброс данных
