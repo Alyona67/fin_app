@@ -310,8 +310,6 @@ fun ProfileScreen(
     onNavigateToGoals: () -> Unit,
     onNavigateToAnalytics: () -> Unit
 ) {
-    var showBalanceDialog by remember { mutableStateOf(false) }
-    var newBalanceText by remember { mutableStateOf("") }
     val currency by viewModel.currency.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -461,20 +459,7 @@ fun ProfileScreen(
             Icon(Icons.Filled.Share, contentDescription = null, tint = GradientPurpleStart)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(currentCardColor)
-                .clickable { showComingSoonDialog = true }
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Изменить общий баланс", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = currentTextColor)
-            Icon(Icons.Filled.Edit, contentDescription = null, tint = GradientPurpleStart)
-        }
+
 
         Spacer(modifier = Modifier.height(36.dp))
 
@@ -515,54 +500,7 @@ fun ProfileScreen(
         )
     }
 
-    if (showBalanceDialog) {
-        AlertDialog(
-            onDismissRequest = { showBalanceDialog = false },
-            title = { Text("Новый общий баланс") },
-            text = {
-                OutlinedTextField(
-                    value = newBalanceText,
-                    onValueChange = { newBalanceText = it },
-                    label = { Text("Сумма") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
 
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val amount = newBalanceText.toDoubleOrNull()
-                    if (amount != null) {
-                        viewModel.setTotalBalance(amount)
-                    }
-                    showBalanceDialog = false
-                }) {
-                    Text("Сохранить", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBalanceDialog = false }) {
-                    Text("Отмена", color = TextGray)
-                }
-            },
-            containerColor = CardWhite
-        )
-    }
-
-    if (showComingSoonDialog) {
-        AlertDialog(
-            onDismissRequest = { showComingSoonDialog = false },
-            title = { Text("В разработке") },
-            text = { Text("Скоро здесь можно будет менять общий баланс. А пока используйте кнопку «Пополнить» на главном экране или добавьте трату.") },
-            confirmButton = {
-                TextButton(onClick = { showComingSoonDialog = false }) {
-                    Text("Понятно", color = GradientPurpleStart, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = CardWhite
-        )
-    }
 }
 
 @Composable
