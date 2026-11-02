@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import androidx.room.Update
 
 @Dao
 interface AppDao {
@@ -28,4 +29,7 @@ interface AppDao {
 
     @Query("DELETE FROM transactions")
     suspend fun clearAllTransactions()
+
+    @Update
+    suspend fun updateCategory(category: CategoryEntity)
 }

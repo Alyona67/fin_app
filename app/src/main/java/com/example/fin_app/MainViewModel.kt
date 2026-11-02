@@ -104,7 +104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (current != null) {
                 val iconName = getIconName(newIcon)
                 val colorHex = String.format("#%06X", (0xFFFFFF and newColor.toArgb()))
-                dao.insertCategory(
+                dao.updateCategory( // <-- ИСПОЛЬЗУЕМ UPDATE ВМЕСТО INSERT
                     current.copy(
                         name = newName,
                         limitAmount = newLimit,
