@@ -318,12 +318,26 @@ fun ProfileScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     val tips = listOf(
         "Записывай траты сразу после покупки. Так ты не забудешь, куда ушли деньги.",
-        "Правило 50/30/20: 50% на necessities, 30% на желания, 20% на сбережения.",
+        "Правило 50/30/20: 50% на необходимые вещи, 30% на желания, 20% на сбережения.",
         "Перед покупкой дорогой вещи подожди 24 часа. Часто желание пропадает.",
         "Анализируй свои подписки. Возможно, ты платишь за то, чем не пользуешься.",
         "Ставь финансовые цели. Когда есть цель, копить гораздо интереснее.",
         "Не сравнивай свои траты с чужими. У каждого свой бюджет и свои потребности.",
-        "Откладывай 10% от любого дохода сразу, как только его получил."
+        "Откладывай 10% от любого дохода сразу, как только его получил.",
+        "Создай финансовую подушку безопасности на 3-6 месяцев жизни.",
+        "Планируй крупные покупки заранее, а не руководствуйся импульс-покупками.",
+        "Веди учет не только расходов, но и доходов. Так видно полную картину.",
+        "Используй кэшбэк и скидки, но не покупай лишнего только ради бонусов.",
+        "Раз в месяц пересматривай свои финансовые цели и корректируй их.",
+        "Не бери кредиты на эмоции или желания. Только на действительно важное.",
+        "Учись говорить «нет» спонтанным тратам. Это экономит больше, чем кажется.",
+        "Проверяй чек после покупки. Иногда там бывают лишние позиции.",
+        "Установи лимит на импульсивные покупки (например, не больше 50 BYN в месяц).",
+        "Инвестируй в свои знания. Это самый надежный актив.",
+        "Оценивай покупку не в деньгах, а в часах работы, которые ты потратил на неё.",
+        "Храни чеки на крупные покупки. Это поможет с гарантией и возвратом.",
+        "Раз в полгода проверяй свои банковские тарифы. Возможно, есть выгоднее.",
+        "Не держи все деньги в одном месте. Диверсификация снижает риски.",
     )
 
     val dayOfYear = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)
@@ -688,7 +702,7 @@ fun AddTransactionSheet(
                 value = amountText, onValueChange = { amountText = it },
                 label = { Text("Сумма (BYN)") },
                 shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentPurple, unfocusedBorderColor = Color.LightGray,
@@ -723,7 +737,7 @@ fun AddTransactionSheet(
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
-                    val amount = amountText.toDoubleOrNull()
+                    val amount = amountText.replace(',', '.').toDoubleOrNull()
                     if (amount != null && amount > 0) onSave(amount, selectedCategoryId)
                     onDismiss()
                 },
@@ -750,7 +764,7 @@ fun AddIncomeSheet(onDismiss: () -> Unit, onSave: (Double) -> Unit) {
                 value = amountText, onValueChange = { amountText = it },
                 label = { Text("Сумма дохода (BYN)") },
                 shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentPurple, unfocusedBorderColor = Color.LightGray,
@@ -760,7 +774,7 @@ fun AddIncomeSheet(onDismiss: () -> Unit, onSave: (Double) -> Unit) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
-                onClick = { amountText.toDoubleOrNull()?.let { if (it > 0) onSave(it) }; onDismiss() },
+                onClick = { amountText.replace(',', '.').toDoubleOrNull()?.let { if (it > 0) onSave(it) }; onDismiss() },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentPurple)
@@ -817,7 +831,7 @@ fun AddCategorySheet(onDismiss: () -> Unit, onSave: (String, Double, ImageVector
                 value = limitText, onValueChange = { limitText = it },
                 label = { Text("Бюджет на месяц (BYN)") },
                 shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentPurple, unfocusedBorderColor = Color.LightGray,
@@ -866,7 +880,7 @@ fun AddCategorySheet(onDismiss: () -> Unit, onSave: (String, Double, ImageVector
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
-                    val limit = limitText.toDoubleOrNull()
+                    val limit = limitText.replace(',', '.').toDoubleOrNull()
                     if (nameText.isNotBlank() && limit != null && limit > 0) {
                         onSave(nameText, limit, selectedIcon, selectedColor)
                         onDismiss()
@@ -907,9 +921,10 @@ fun CategoryActionSheet(
         Icons.Filled.ShoppingCart, Icons.Filled.DirectionsCar, Icons.Filled.Flight, Icons.Filled.Pets
     )
     val availableColors = listOf(
-        Color(0xFFE53E3E), Color(0xFFDD6B20), Color(0xFFD69E2E), Color(0xFF38A169),
-        Color(0xFF3182CE), Color(0xFF805AD5), Color(0xFFD53F8C), Color(0xFF319795),
-        Color(0xFF0B2F75), Color(0xFF750DBE)
+        Color(0xFFEA3232), Color(0xFFE86C1C), Color(0xFFE0A228), Color(0xFF31AF6D),
+        Color(0xFF2681DA), Color(0xFF6E40DA), Color(0xFFD53F8C), Color(0xFF36B6B3),
+        Color(0xFF0B2F75), Color(0xFF750DBE), Color(0xFF33D509), Color(0xFF79081E),
+        Color(0xFF04C8E1), Color(0xFF867555), Color(0xFF7E4A6B), Color(0xFFC7DC2A)
     )
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardWhite) {
@@ -958,7 +973,7 @@ fun CategoryActionSheet(
                     value = editLimit, onValueChange = { editLimit = it },
                     label = { Text("Лимит (BYN)") },
                     shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -1004,7 +1019,7 @@ fun CategoryActionSheet(
                     ) { Text("Отмена", color = TextGray) }
                     Button(
                         onClick = {
-                            val limit = editLimit.toDoubleOrNull()
+                            val limit = editLimit.replace(',', '.').toDoubleOrNull()
                             if (editName.isNotBlank() && limit != null && limit > 0) {
                                 onUpdateCategory(editName, limit, editIcon, editColor)
                                 onDismiss()
@@ -1021,13 +1036,13 @@ fun CategoryActionSheet(
                     value = amountText, onValueChange = { amountText = it },
                     label = { Text("Сумма расхода (BYN)") },
                     shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        val amount = amountText.toDoubleOrNull()
+                        val amount = amountText.replace(',', '.').toDoubleOrNull()
                         if (amount != null && amount > 0) onAddExpense(amount)
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -1213,7 +1228,7 @@ fun GoalsScreen(
                     OutlinedTextField(
                         value = goalTarget, onValueChange = { goalTarget = it },
                         label = { Text("Сумма цели (BYN)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -1221,7 +1236,7 @@ fun GoalsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val target = goalTarget.toDoubleOrNull()
+                    val target = goalTarget.replace(',', '.').toDoubleOrNull()
                     if (goalName.isNotBlank() && target != null && target > 0) {
                         viewModel.addGoal(goalName, target, "🎯")
                         showAddGoalDialog = false
@@ -1256,7 +1271,7 @@ fun GoalsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val amount = moneyText.toDoubleOrNull()
+                    val amount = moneyText.replace(',', '.').toDoubleOrNull()
                     if (amount != null && amount > 0) {
                         viewModel.addMoneyToGoal(selectedGoalForMoney!!, amount)
                         showAddMoneyDialog = false

@@ -51,12 +51,17 @@ data class BottomNavItem(
 @Composable
 fun MainAppScreen(viewModel: MainViewModel) {
     val navController = rememberNavController()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = context.getSharedPreferences("fin_app_prefs", android.content.Context.MODE_PRIVATE)
 
     var showExpenseSheet by remember { mutableStateOf(false) }
     var showIncomeSheet by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
 
-    var isDarkTheme by remember { mutableStateOf(false) }
+    // Читаем сохраненную тему при запуске
+    var isDarkTheme by remember {
+        mutableStateOf(prefs.getBoolean("is_dark_theme", false))
+    }
 
     val items = listOf(
         BottomNavItem("dashboard", "Главная", Icons.Filled.Home),
@@ -144,7 +149,11 @@ fun MainAppScreen(viewModel: MainViewModel) {
             composable("profile") {
                 ProfileScreen(
                     isDarkTheme = isDarkTheme,
-                    onThemeChange = { isDarkTheme = it },
+                    onThemeChange = {
+                        isDarkTheme = it
+                        // СОХРАНЯЕМ ВЫБОР В ПАМЯТЬ
+                        prefs.edit().putBoolean("is_dark_theme", it).apply()
+                    },
                     onNavigateToGoals = {
                         navController.navigate("goals")
                     },

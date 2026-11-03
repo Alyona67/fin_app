@@ -33,8 +33,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val totalBalance: StateFlow<Double> = transactions.map { list ->
         val income = list.filter { it.type == "INCOME" }.sumOf { it.amount }
         val expense = list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-        1500.0 + income - expense
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1500.0)
+        0.0 + income - expense
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     private val _currency = MutableStateFlow("BYN")
     val currency: StateFlow<String> = _currency.asStateFlow()
@@ -104,7 +104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (current != null) {
                 val iconName = getIconName(newIcon)
                 val colorHex = String.format("#%06X", (0xFFFFFF and newColor.toArgb()))
-                dao.updateCategory( // <-- ИСПОЛЬЗУЕМ UPDATE ВМЕСТО INSERT
+                dao.updateCategory(
                     current.copy(
                         name = newName,
                         limitAmount = newLimit,
